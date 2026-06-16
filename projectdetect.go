@@ -79,17 +79,24 @@ type ProjectType struct {
 }
 
 // Indicator is a single match rule against a directory's contents.
-// Exactly one of HasFile / HasGlob / CELExpr should be set per
-// indicator.
+// Exactly one of HasFile / HasGlob / HasSubdirGlob / CELExpr should be
+// set per indicator.
 type Indicator struct {
 	// HasFile is a case-insensitive exact basename match. Most
 	// built-in project indicators are this shape (go.mod,
 	// package.json, Cargo.toml, pyproject.toml, Gemfile, pom.xml).
 	HasFile string
-	// HasGlob is a glob (filepath.Match) over basenames. Used by
+	// HasGlob is a glob (filepath.Match) over FILE basenames. Used by
 	// Terraform (`*.tf`), .NET (`*.csproj`), and similar
-	// extension-based project signals.
+	// extension-based project signals. Directories are never matched
+	// — use HasSubdirGlob for those.
 	HasGlob string
+	// HasSubdirGlob is a glob (filepath.Match) over immediate
+	// SUBDIRECTORY basenames. Used by project types whose canonical
+	// marker is a directory bundle rather than a file — e.g. Xcode's
+	// `*.xcodeproj` / `*.xcworkspace`. HasFile / HasGlob only ever see
+	// files, so a directory marker can only fire through this rule.
+	HasSubdirGlob string
 	// CELExpr is a CEL expression evaluated against a directory
 	// context with two list-of-string variables:
 	//
@@ -111,6 +118,10 @@ func (i Indicator) String() string {
 		return i.HasFile
 	case i.HasGlob != "":
 		return i.HasGlob
+	case i.HasSubdirGlob != "":
+		// Trailing slash signals a directory marker in "why matched"
+		// output (e.g. "MyApp.xcodeproj/").
+		return i.HasSubdirGlob + "/"
 	case i.CELExpr != "":
 		return "cel:" + i.CELExpr
 	}
@@ -238,6 +249,12 @@ func (t *ProjectType) match(files, subdirs []string) (Indicator, bool) {
 		case ind.HasGlob != "":
 			for _, name := range files {
 				if ok, err := filepath.Match(ind.HasGlob, name); err == nil && ok {
+					return ind, true
+				}
+			}
+		case ind.HasSubdirGlob != "":
+			for _, name := range subdirs {
+				if ok, err := filepath.Match(ind.HasSubdirGlob, name); err == nil && ok {
 					return ind, true
 				}
 			}

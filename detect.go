@@ -15,9 +15,10 @@ import (
 // slice when no project type fires.
 //
 // Reads the directory's listing once (non-recursive); HasFile /
-// HasGlob indicators run against file basenames; CELExpr indicators
-// see both `files` and `subdirs` lists. fsys=nil uses os.ReadDir for
-// the production filesystem path.
+// HasGlob indicators run against file basenames, HasSubdirGlob against
+// immediate subdirectory basenames, and CELExpr indicators see both
+// `files` and `subdirs` lists. fsys=nil uses os.ReadDir for the
+// production filesystem path.
 func (r *Registry) Detect(fsys fs.FS, dir string) []Match {
 	files, subdirs, err := readListing(fsys, dir)
 	if err != nil {
