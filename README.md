@@ -10,11 +10,11 @@ Detect what kind of project a directory is — pure Go, no cgo.
 - **`Detect(fsys, dir)`** — what project type(s) does *this* directory look like? (a directory can match several at once — a Go module that also ships a `docker-compose.yml` matches both)
 - **`Find(ctx, root, opts)`** — walk a tree and report every project root under it.
 
-A type matches by **indicators**: an exact filename (`HasFile`), a basename glob (`HasGlob`), or — optionally — a CEL expression over the directory's `files` / `subdirs`.
+A type matches by **indicators**: an exact filename (`HasFile`), a file-basename glob (`HasGlob`), a subdirectory-basename glob (`HasSubdirGlob`, for directory markers like `*.xcodeproj`), or — optionally — a CEL expression over the directory's `files` / `subdirs`.
 
 ## Built-in types
 
-`go`, `node`, `rust`, `python`, `ruby`, `java-maven`, `java-gradle`, `dotnet`, `terraform`, `docker-compose`, the language / build-tool ecosystems `swift`, `php`, `scala-sbt`, `scala-mill`, `cmake`, `autotools`, `r`, `zig`, `perl`, `matlab`, and the static-site generators `hugo`, `jekyll`, `eleventy`, `astro`, `gatsby`, `mkdocs`, `docusaurus`, `pelican` (28 total). The `dotnet` type covers `*.csproj` / `*.fsproj` / `*.vbproj` / `*.sln` / `*.slnx` plus `global.json` / `Directory.Build.props` / `Directory.Packages.props` / `nuget.config`. `swift` matches `Package.swift` (SwiftPM) and `*.podspec` (CocoaPods); `cmake` matches `CMakeLists.txt` (C/C++).
+`go`, `node`, `rust`, `python`, `ruby`, `java-maven`, `java-gradle`, `dotnet`, `terraform`, `docker-compose`, the language / build-tool ecosystems `swift`, `php`, `scala-sbt`, `scala-mill`, `cmake`, `autotools`, `r`, `zig`, `perl`, `matlab`, and the static-site generators `hugo`, `jekyll`, `eleventy`, `astro`, `gatsby`, `mkdocs`, `docusaurus`, `pelican` (28 total). The `dotnet` type covers `*.csproj` / `*.fsproj` / `*.vbproj` / `*.sln` / `*.slnx` plus `global.json` / `Directory.Build.props` / `Directory.Packages.props` / `nuget.config`. `swift` matches `Package.swift` (SwiftPM), `*.podspec` (CocoaPods), and the `*.xcodeproj` / `*.xcworkspace` bundles (Xcode); `cmake` matches `CMakeLists.txt` (C/C++).
 
 Each type also declares its canonical build-artefact dirs (`bin`/`obj`, `node_modules`, `target`, …) — see `CollectBuildExcludes`.
 
@@ -51,7 +51,7 @@ res, err := projectdetect.Find(ctx, "/path/to/code", projectdetect.FindOptions{}
 
 ## Custom types (YAML)
 
-Load extra project types from YAML — `has_file`, `has_glob`, or `cel`:
+Load extra project types from YAML — `has_file`, `has_glob`, `has_subdir_glob`, or `cel`:
 
 ```yaml
 project_types:
@@ -59,6 +59,7 @@ project_types:
     indicators:
       - has_file: "my.config"
       - has_glob: "*.mytool"
+      - has_subdir_glob: "*.bundle"
       - cel: '"services" in subdirs && "compose.yaml" in files'
 ```
 

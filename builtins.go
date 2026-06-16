@@ -113,10 +113,15 @@ func init() {
 
 	Register(&ProjectType{
 		Name:        "swift",
-		Description: "Swift package (Package.swift) / CocoaPods (*.podspec)",
+		Description: "Swift package (Package.swift) / CocoaPods (*.podspec) / Xcode (*.xcodeproj, *.xcworkspace)",
 		Indicators: []Indicator{
 			{HasFile: "Package.swift"},
 			{HasGlob: "*.podspec"},
+			// Xcode bundles are directories, so they must match via
+			// HasSubdirGlob — HasGlob only sees files. Covers
+			// Xcode-only repos that ship no Package.swift (#3).
+			{HasSubdirGlob: "*.xcodeproj"},
+			{HasSubdirGlob: "*.xcworkspace"},
 		},
 		BuildExcludes: []string{".build", ".swiftpm", "DerivedData"},
 	})

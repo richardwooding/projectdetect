@@ -105,6 +105,46 @@ func TestLoadFromFile_MixedIndicators(t *testing.T) {
 	}
 }
 
+func TestLoadFromFile_SubdirGlobIndicator(t *testing.T) {
+	tmp := t.TempDir()
+	configPath := filepath.Join(tmp, "types.yaml")
+	mustWrite(t, configPath, `project_types:
+  - name: xcode-app
+    indicators:
+      - has_subdir_glob: "*.xcodeproj"
+`)
+	reg := projectdetect.NewRegistry()
+	n, err := reg.LoadFromFile(configPath)
+	if err != nil {
+		t.Fatalf("LoadFromFile: %v", err)
+	}
+	if n != 1 {
+		t.Errorf("registered = %d, want 1", n)
+	}
+
+	// Directory containing a *.xcodeproj BUNDLE (a subdir) matches.
+	dir := t.TempDir()
+	mustMkdir(t, filepath.Join(dir, "MyApp.xcodeproj"))
+	hasXcode := false
+	for _, m := range reg.Detect(nil, dir) {
+		if m.Type == "xcode-app" {
+			hasXcode = true
+		}
+	}
+	if !hasXcode {
+		t.Errorf("xcode-app not detected via has_subdir_glob; matches=%+v", reg.Detect(nil, dir))
+	}
+
+	// A same-named regular FILE must NOT match a subdir glob.
+	fileDir := t.TempDir()
+	mustWrite(t, filepath.Join(fileDir, "MyApp.xcodeproj"), "x")
+	for _, m := range reg.Detect(nil, fileDir) {
+		if m.Type == "xcode-app" {
+			t.Errorf("xcode-app fired on a *.xcodeproj FILE; has_subdir_glob must only match subdirs")
+		}
+	}
+}
+
 func TestLoadFromFile_BadCEL(t *testing.T) {
 	tmp := t.TempDir()
 	configPath := filepath.Join(tmp, "bad.yaml")

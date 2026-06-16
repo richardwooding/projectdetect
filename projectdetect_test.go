@@ -109,6 +109,49 @@ func TestDetect_GlobIndicators(t *testing.T) {
 	}
 }
 
+// TestDetect_XcodeSubdirOnly covers issue #3: a pure Xcode repo whose
+// only marker is a *.xcodeproj / *.xcworkspace bundle (a DIRECTORY) and
+// that ships no Package.swift. HasFile / HasGlob only see files, so the
+// HasSubdirGlob indicator is what makes this detect as swift.
+func TestDetect_XcodeSubdirOnly(t *testing.T) {
+	cases := []struct {
+		name      string
+		bundleDir string
+		indicator string
+	}{
+		{"xcodeproj", "MyApp.xcodeproj", "*.xcodeproj/"},
+		{"xcworkspace", "MyApp.xcworkspace", "*.xcworkspace/"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			// A directory bundle, plus an unrelated file to prove the
+			// file-based indicators do NOT fire on it.
+			mustMkdir(t, filepath.Join(dir, tc.bundleDir))
+			mustWrite(t, filepath.Join(dir, "README.md"), "x")
+			matches := projectdetect.Detect(nil, dir)
+			if len(matches) != 1 || matches[0].Type != "swift" {
+				t.Fatalf("Detect: got %+v, want single swift match", matches)
+			}
+			if matches[0].Indicator != tc.indicator {
+				t.Errorf("indicator = %q, want %q", matches[0].Indicator, tc.indicator)
+			}
+		})
+	}
+}
+
+// TestDetect_SubdirGlobIgnoresFiles guards the files/subdirs split: a
+// HasSubdirGlob must NOT match a same-named regular FILE. A stray file
+// literally called "x.xcodeproj" should not make a directory detect as
+// swift.
+func TestDetect_SubdirGlobIgnoresFiles(t *testing.T) {
+	dir := t.TempDir()
+	mustWrite(t, filepath.Join(dir, "x.xcodeproj"), "not a real bundle")
+	if matches := projectdetect.Detect(nil, dir); len(matches) != 0 {
+		t.Errorf("Detect: got %+v, want empty (a *.xcodeproj FILE is not a subdir marker)", matches)
+	}
+}
+
 func TestDetect_MultipleTypes(t *testing.T) {
 	// A Go module that also ships a docker-compose.yml fires both
 	// — matches the cross-firing semantics established in PR #95.

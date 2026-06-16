@@ -32,11 +32,12 @@ type ConfigEntry struct {
 }
 
 // ConfigIndicator is the YAML representation of an Indicator. Exactly
-// one of HasFile / HasGlob / CEL should be set per entry.
+// one of HasFile / HasGlob / HasSubdirGlob / CEL should be set per entry.
 type ConfigIndicator struct {
-	HasFile string `yaml:"has_file,omitempty"`
-	HasGlob string `yaml:"has_glob,omitempty"`
-	CEL     string `yaml:"cel,omitempty"`
+	HasFile       string `yaml:"has_file,omitempty"`
+	HasGlob       string `yaml:"has_glob,omitempty"`
+	HasSubdirGlob string `yaml:"has_subdir_glob,omitempty"`
+	CEL           string `yaml:"cel,omitempty"`
 }
 
 // LoadFromFile parses path as YAML and registers every project type
@@ -94,10 +95,12 @@ func buildProjectType(entry ConfigEntry) (*ProjectType, error) {
 			inds = append(inds, Indicator{HasFile: ci.HasFile})
 		case ci.HasGlob != "":
 			inds = append(inds, Indicator{HasGlob: ci.HasGlob})
+		case ci.HasSubdirGlob != "":
+			inds = append(inds, Indicator{HasSubdirGlob: ci.HasSubdirGlob})
 		case ci.CEL != "":
 			inds = append(inds, Indicator{CELExpr: ci.CEL})
 		default:
-			return nil, fmt.Errorf("indicator[%d]: must set has_file / has_glob / cel", j)
+			return nil, fmt.Errorf("indicator[%d]: must set has_file / has_glob / has_subdir_glob / cel", j)
 		}
 	}
 	return &ProjectType{
