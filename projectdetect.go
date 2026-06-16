@@ -12,16 +12,38 @@
 // Custom user-registered project types via CEL expressions are NOT
 // in this MVP — a follow-up PR will add a CEL-driven extension path
 // over the same registry.
-package projecttype
+package projectdetect
 
 import (
 	"fmt"
 	"path/filepath"
 	"sort"
 	"sync"
-
-	"github.com/google/cel-go/cel"
 )
+
+// DirEvaluator evaluates a compiled directory predicate (a CELExpr
+// indicator) against a directory's file/subdir basenames. The base package
+// stays free of any CEL dependency by going through this interface; the
+// concrete implementation is supplied by the optional
+// github.com/richardwooding/projectdetect/celindicators sub-package.
+type DirEvaluator interface {
+	Eval(files, subdirs []string) bool
+}
+
+// celCompiler compiles a CELExpr indicator into a DirEvaluator. It is nil
+// unless the celindicators sub-package is imported (which registers it via
+// SetCELCompiler in its init). With it unset, registering a ProjectType
+// that uses a CELExpr indicator fails with a clear error — HasFile / HasGlob
+// indicators and all built-ins need no compiler.
+var celCompiler func(expr string) (DirEvaluator, error)
+
+// SetCELCompiler installs the CEL indicator compiler. Called from
+// celindicators' init(); apps enable CEL indicators with a blank import:
+//
+//	import _ "github.com/richardwooding/projectdetect/celindicators"
+func SetCELCompiler(fn func(expr string) (DirEvaluator, error)) {
+	celCompiler = fn
+}
 
 // ProjectType describes a kind of project and the indicators that
 // identify it. Indicators are evaluated against a directory's
@@ -49,11 +71,11 @@ type ProjectType struct {
 	// Empty for project types that have no canonical artefact dir.
 	BuildExcludes []string
 
-	// compiled holds the cel.Program for each Indicator that uses
+	// compiled holds the DirEvaluator for each Indicator that uses
 	// CELExpr. Same length as Indicators when set; nil entries for
 	// HasFile / HasGlob indicators. Built by Register() so the
 	// hot path doesn't re-compile per evaluation.
-	compiled []cel.Program
+	compiled []DirEvaluator
 }
 
 // Indicator is a single match rule against a directory's contents.
@@ -144,21 +166,26 @@ func Register(t *ProjectType) {
 	}
 }
 
-// compileIndicators populates ProjectType.compiled with cel.Program
-// entries for every CELExpr indicator. HasFile / HasGlob indicators
-// get a nil slot at the same index. Returns the first compile error
-// (with the indicator's CEL source attached for debuggability).
+// compileIndicators populates ProjectType.compiled with a DirEvaluator
+// for every CELExpr indicator. HasFile / HasGlob indicators get a nil slot
+// at the same index. Returns the first compile error (with the indicator's
+// CEL source attached for debuggability), or a clear error when a CELExpr
+// indicator is present but no CEL compiler has been installed (import
+// github.com/richardwooding/projectdetect/celindicators).
 func compileIndicators(t *ProjectType) error {
 	if !hasCELIndicator(t.Indicators) {
 		t.compiled = nil
 		return nil
 	}
-	progs := make([]cel.Program, len(t.Indicators))
+	if celCompiler == nil {
+		return fmt.Errorf("project type %q uses a CEL indicator but no CEL compiler is installed — import github.com/richardwooding/projectdetect/celindicators", t.Name)
+	}
+	progs := make([]DirEvaluator, len(t.Indicators))
 	for i, ind := range t.Indicators {
 		if ind.CELExpr == "" {
 			continue
 		}
-		prog, err := compileDirCEL(ind.CELExpr)
+		prog, err := celCompiler(ind.CELExpr)
 		if err != nil {
 			return fmt.Errorf("indicator[%d] CEL compile: %w", i, err)
 		}
@@ -215,7 +242,7 @@ func (t *ProjectType) match(files, subdirs []string) (Indicator, bool) {
 				}
 			}
 		case ind.CELExpr != "" && i < len(t.compiled) && t.compiled[i] != nil:
-			if evalDirCEL(t.compiled[i], files, subdirs) {
+			if t.compiled[i].Eval(files, subdirs) {
 				return ind, true
 			}
 		}

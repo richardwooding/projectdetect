@@ -1,4 +1,4 @@
-package projecttype_test
+package projectdetect_test
 
 import (
 	"os"
@@ -7,7 +7,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/richardwooding/file-search-on/internal/projecttype"
+	"github.com/richardwooding/projectdetect"
 )
 
 func TestDetect_SingleType(t *testing.T) {
@@ -45,7 +45,7 @@ func TestDetect_SingleType(t *testing.T) {
 			if err := os.WriteFile(filepath.Join(dir, tc.indicator), []byte("x"), 0o644); err != nil {
 				t.Fatal(err)
 			}
-			matches := projecttype.Detect(nil, dir)
+			matches := projectdetect.Detect(nil, dir)
 			if len(matches) != 1 || matches[0].Type != tc.wantType {
 				t.Fatalf("Detect: got %+v, want single match for %q", matches, tc.wantType)
 			}
@@ -83,7 +83,7 @@ func TestDetect_GlobIndicators(t *testing.T) {
 			if err := os.WriteFile(filepath.Join(dir, tc.file), []byte("x"), 0o644); err != nil {
 				t.Fatal(err)
 			}
-			matches := projecttype.Detect(nil, dir)
+			matches := projectdetect.Detect(nil, dir)
 			if len(matches) != 1 || matches[0].Type != tc.wantType {
 				t.Fatalf("Detect: got %+v, want single match for %q", matches, tc.wantType)
 			}
@@ -100,7 +100,7 @@ func TestDetect_MultipleTypes(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	matches := projecttype.Detect(nil, dir)
+	matches := projectdetect.Detect(nil, dir)
 	got := make([]string, len(matches))
 	for i, m := range matches {
 		got[i] = m.Type
@@ -124,7 +124,7 @@ func TestDetect_DotnetSlnxRoot(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	matches := projecttype.Detect(nil, dir)
+	matches := projectdetect.Detect(nil, dir)
 	if len(matches) != 1 || matches[0].Type != "dotnet" {
 		t.Fatalf("Detect: got %+v, want single dotnet match for a .slnx-only root", matches)
 	}
@@ -135,7 +135,7 @@ func TestDetect_NoMatch(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "random.txt"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if matches := projecttype.Detect(nil, dir); len(matches) != 0 {
+	if matches := projectdetect.Detect(nil, dir); len(matches) != 0 {
 		t.Errorf("Detect: got %+v, want empty", matches)
 	}
 }
@@ -149,7 +149,7 @@ func TestFind_StopsAtProjectRoot(t *testing.T) {
 	mustWrite(t, filepath.Join(root, "a", "go.mod"), "module a\n")
 	mustWrite(t, filepath.Join(root, "a", "inner", "go.mod"), "module a/inner\n")
 
-	result, err := projecttype.Find(t.Context(), root, projecttype.FindOptions{})
+	result, err := projectdetect.Find(t.Context(), root, projectdetect.FindOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,7 +168,7 @@ func TestFind_NestedTrue(t *testing.T) {
 	mustWrite(t, filepath.Join(root, "a", "go.mod"), "module a\n")
 	mustWrite(t, filepath.Join(root, "a", "inner", "Cargo.toml"), "[package]\nname=\"x\"\n")
 
-	result, err := projecttype.Find(t.Context(), root, projecttype.FindOptions{Nested: true})
+	result, err := projectdetect.Find(t.Context(), root, projectdetect.FindOptions{Nested: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,7 +186,7 @@ func TestFind_TypesFilter(t *testing.T) {
 	mustWrite(t, filepath.Join(root, "rust-app", "Cargo.toml"), "[package]\nname=\"x\"\n")
 	mustWrite(t, filepath.Join(root, "node-app", "package.json"), `{"name":"x"}`)
 
-	result, err := projecttype.Find(t.Context(), root, projecttype.FindOptions{
+	result, err := projectdetect.Find(t.Context(), root, projectdetect.FindOptions{
 		Types: []string{"go", "rust"},
 	})
 	if err != nil {
@@ -205,7 +205,7 @@ func TestFind_Excludes(t *testing.T) {
 	mustWrite(t, filepath.Join(root, "real", "go.mod"), "module real\n")
 	mustWrite(t, filepath.Join(root, "node_modules", "vendored", "go.mod"), "module vendored\n")
 
-	result, err := projecttype.Find(t.Context(), root, projecttype.FindOptions{
+	result, err := projectdetect.Find(t.Context(), root, projectdetect.FindOptions{
 		Excludes: []string{"node_modules"},
 	})
 	if err != nil {
@@ -217,7 +217,7 @@ func TestFind_Excludes(t *testing.T) {
 }
 
 func TestRegistry_Types(t *testing.T) {
-	types := projecttype.DefaultRegistry().Types()
+	types := projectdetect.DefaultRegistry().Types()
 	if len(types) < 18 {
 		t.Errorf("registered types = %d, want at least 18 built-ins (10 original + 8 SSGs)", len(types))
 	}

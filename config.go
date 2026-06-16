@@ -1,4 +1,4 @@
-package projecttype
+package projectdetect
 
 import (
 	"errors"

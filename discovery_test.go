@@ -1,11 +1,12 @@
-package projecttype_test
+package projectdetect_test
 
 import (
+	_ "github.com/richardwooding/projectdetect/celindicators"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/richardwooding/file-search-on/internal/projecttype"
+	"github.com/richardwooding/projectdetect"
 )
 
 // withConfigEnv points the project-type discovery at two test-owned
@@ -62,7 +63,7 @@ func TestLoadDiscovered_BothLayers(t *testing.T) {
       - cel: '"local.marker" in files'
 `)
 
-	reg := projecttype.NewRegistry()
+	reg := projectdetect.NewRegistry()
 	n, err := reg.LoadDiscovered()
 	if err != nil {
 		t.Fatalf("LoadDiscovered: %v", err)
@@ -88,7 +89,7 @@ func TestLoadDiscovered_BothLayers(t *testing.T) {
 func TestLoadDiscovered_NoConfigs(t *testing.T) {
 	// Empty dirs with no config files → loads zero types, no error.
 	withConfigEnv(t, t.TempDir(), t.TempDir())
-	reg := projecttype.NewRegistry()
+	reg := projectdetect.NewRegistry()
 	n, err := reg.LoadDiscovered()
 	if err != nil {
 		t.Fatalf("LoadDiscovered: %v", err)
@@ -113,7 +114,7 @@ func TestLoadDiscovered_BadConfigSurfaces(t *testing.T) {
       - cel: 'this isnt valid CEL ((('
 `)
 
-	reg := projecttype.NewRegistry()
+	reg := projectdetect.NewRegistry()
 	if _, err := reg.LoadDiscovered(); err == nil {
 		t.Errorf("LoadDiscovered: expected compile error from bad CEL, got nil")
 	}
@@ -121,7 +122,7 @@ func TestLoadDiscovered_BadConfigSurfaces(t *testing.T) {
 
 func TestDiscoveryPaths_OrderUserWideThenCWD(t *testing.T) {
 	withConfigEnv(t, t.TempDir(), t.TempDir())
-	paths := projecttype.DiscoveryPaths()
+	paths := projectdetect.DiscoveryPaths()
 	if len(paths) != 2 {
 		t.Fatalf("paths = %v, want 2 entries (user-wide + CWD)", paths)
 	}
@@ -134,7 +135,7 @@ func TestDiscoveryPaths_OrderUserWideThenCWD(t *testing.T) {
 	}
 }
 
-func containsType(matches []projecttype.Match, name string) bool {
+func containsType(matches []projectdetect.Match, name string) bool {
 	for _, m := range matches {
 		if m.Type == name {
 			return true

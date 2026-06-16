@@ -1,10 +1,11 @@
-package projecttype_test
+package projectdetect_test
 
 import (
+	_ "github.com/richardwooding/projectdetect/celindicators"
 	"path/filepath"
 	"testing"
 
-	"github.com/richardwooding/file-search-on/internal/projecttype"
+	"github.com/richardwooding/projectdetect"
 )
 
 // configLoadTests use an isolated registry (via NewRegistry) so that
@@ -20,7 +21,7 @@ func TestLoadFromFile_CELIndicator(t *testing.T) {
     indicators:
       - cel: '"services" in subdirs && "foo.yaml" in files'
 `)
-	reg := projecttype.NewRegistry()
+	reg := projectdetect.NewRegistry()
 	n, err := reg.LoadFromFile(configPath)
 	if err != nil {
 		t.Fatalf("LoadFromFile: %v", err)
@@ -69,7 +70,7 @@ func TestLoadFromFile_MixedIndicators(t *testing.T) {
       - has_glob: "*.tf"
       - cel: '"main.tf" in files'
 `)
-	reg := projecttype.NewRegistry()
+	reg := projectdetect.NewRegistry()
 	n, err := reg.LoadFromFile(configPath)
 	if err != nil {
 		t.Fatalf("LoadFromFile: %v", err)
@@ -112,7 +113,7 @@ func TestLoadFromFile_BadCEL(t *testing.T) {
     indicators:
       - cel: 'this is not valid cel ((('
 `)
-	reg := projecttype.NewRegistry()
+	reg := projectdetect.NewRegistry()
 	if _, err := reg.LoadFromFile(configPath); err == nil {
 		t.Errorf("LoadFromFile: expected compile error, got nil")
 	}
@@ -124,7 +125,7 @@ func TestLoadFromFile_MissingIndicators(t *testing.T) {
 	mustWrite(t, configPath, `project_types:
   - name: missing
 `)
-	reg := projecttype.NewRegistry()
+	reg := projectdetect.NewRegistry()
 	if _, err := reg.LoadFromFile(configPath); err == nil {
 		t.Errorf("LoadFromFile: expected error for missing indicators, got nil")
 	}

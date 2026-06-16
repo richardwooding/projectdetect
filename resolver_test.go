@@ -1,10 +1,10 @@
-package projecttype_test
+package projectdetect_test
 
 import (
 	"path/filepath"
 	"testing"
 
-	"github.com/richardwooding/file-search-on/internal/projecttype"
+	"github.com/richardwooding/projectdetect"
 )
 
 func TestResolver_FindsNearestProject(t *testing.T) {
@@ -20,7 +20,7 @@ func TestResolver_FindsNearestProject(t *testing.T) {
 	mustWrite(t, filepath.Join(root, "proj", "inner", "Cargo.toml"), "[package]\nname=\"x\"\n")
 	mustWrite(t, filepath.Join(root, "proj", "inner", "src", "lib.rs"), "")
 
-	resolver := projecttype.NewResolver(root, nil)
+	resolver := projectdetect.NewResolver(root, nil)
 
 	// main.go lives in proj/cmd → nearest ancestor is proj (go).
 	matches := resolver.Resolve(filepath.Join(root, "proj", "cmd", "main.go"))
@@ -38,7 +38,7 @@ func TestResolver_FindsNearestProject(t *testing.T) {
 func TestResolver_NoProject(t *testing.T) {
 	root := t.TempDir()
 	mustWrite(t, filepath.Join(root, "loose.txt"), "")
-	resolver := projecttype.NewResolver(root, nil)
+	resolver := projectdetect.NewResolver(root, nil)
 	if matches := resolver.Resolve(filepath.Join(root, "loose.txt")); matches != nil {
 		t.Errorf("file outside any project should return nil, got %+v", matches)
 	}
@@ -54,7 +54,7 @@ func TestResolveForPath_FindsNearest(t *testing.T) {
 	mustWrite(t, filepath.Join(root, "proj", "inner", "Cargo.toml"), "[package]\nname=\"x\"\n")
 	mustWrite(t, filepath.Join(root, "proj", "inner", "src", "lib.rs"), "")
 
-	gotRoot, matches := projecttype.ResolveForPath(filepath.Join(root, "proj", "cmd", "main.go"), nil)
+	gotRoot, matches := projectdetect.ResolveForPath(filepath.Join(root, "proj", "cmd", "main.go"), nil)
 	if gotRoot != filepath.Join(root, "proj") {
 		t.Errorf("root=%q want %q", gotRoot, filepath.Join(root, "proj"))
 	}
@@ -63,7 +63,7 @@ func TestResolveForPath_FindsNearest(t *testing.T) {
 	}
 
 	// Nested project — inner Cargo.toml wins over outer go.mod.
-	gotRoot, matches = projecttype.ResolveForPath(filepath.Join(root, "proj", "inner", "src", "lib.rs"), nil)
+	gotRoot, matches = projectdetect.ResolveForPath(filepath.Join(root, "proj", "inner", "src", "lib.rs"), nil)
 	if gotRoot != filepath.Join(root, "proj", "inner") {
 		t.Errorf("nested root=%q want %q", gotRoot, filepath.Join(root, "proj", "inner"))
 	}
@@ -76,7 +76,7 @@ func TestResolveForPath_NoProject(t *testing.T) {
 	root := t.TempDir()
 	p := filepath.Join(root, "loose.txt")
 	mustWrite(t, p, "")
-	gotRoot, matches := projecttype.ResolveForPath(p, nil)
+	gotRoot, matches := projectdetect.ResolveForPath(p, nil)
 	if gotRoot != "" || matches != nil {
 		t.Errorf("no-project lookup: root=%q matches=%+v; want (empty, nil)", gotRoot, matches)
 	}
@@ -91,7 +91,7 @@ func TestResolveForPath_PolyglotMultipleTypes(t *testing.T) {
 	mustMkdir(t, filepath.Join(root, "cmd"))
 	mustWrite(t, filepath.Join(root, "cmd", "main.go"), "package main\n")
 
-	gotRoot, matches := projecttype.ResolveForPath(filepath.Join(root, "cmd", "main.go"), nil)
+	gotRoot, matches := projectdetect.ResolveForPath(filepath.Join(root, "cmd", "main.go"), nil)
 	if gotRoot != root {
 		t.Errorf("root=%q want %q", gotRoot, root)
 	}
@@ -111,10 +111,10 @@ func TestResolver_CustomRegistry(t *testing.T) {
 	// Use an isolated registry with a single custom type so we can
 	// verify the resolver targets the registry it was constructed
 	// with, not defaultRegistry.
-	reg := projecttype.NewRegistry()
-	if err := reg.Register(&projecttype.ProjectType{
+	reg := projectdetect.NewRegistry()
+	if err := reg.Register(&projectdetect.ProjectType{
 		Name: "custom",
-		Indicators: []projecttype.Indicator{
+		Indicators: []projectdetect.Indicator{
 			{HasFile: "custom.marker"},
 		},
 	}); err != nil {
@@ -126,7 +126,7 @@ func TestResolver_CustomRegistry(t *testing.T) {
 	mustWrite(t, filepath.Join(root, "go.mod"), "module x\n") // would fire 'go' in defaultRegistry
 	mustWrite(t, filepath.Join(root, "file.txt"), "")
 
-	resolver := projecttype.NewResolver(root, reg)
+	resolver := projectdetect.NewResolver(root, reg)
 	matches := resolver.Resolve(filepath.Join(root, "file.txt"))
 	if len(matches) != 1 || matches[0].Type != "custom" {
 		t.Errorf("custom resolver: matches=%+v, want [custom] (NOT [go] from defaultRegistry)", matches)
