@@ -26,6 +26,21 @@ func TestDetect_SingleType(t *testing.T) {
 		{"java-maven", "pom.xml", "java-maven"},
 		{"java-gradle", "build.gradle.kts", "java-gradle"},
 		{"docker-compose", "compose.yaml", "docker-compose"},
+		// Additional language / build-tool ecosystems.
+		{"swift-spm", "Package.swift", "swift"},
+		{"php", "composer.json", "php"},
+		{"scala-sbt", "build.sbt", "scala-sbt"},
+		{"scala-mill", "build.mill", "scala-mill"},
+		{"scala-mill-sc", "build.sc", "scala-mill"},
+		{"cmake", "CMakeLists.txt", "cmake"},
+		{"autotools-configure-ac", "configure.ac", "autotools"},
+		{"autotools-makefile-am", "Makefile.am", "autotools"},
+		{"r-description", "DESCRIPTION", "r"},
+		{"zig", "build.zig", "zig"},
+		{"zig-zon", "build.zig.zon", "zig"},
+		{"perl-makefile-pl", "Makefile.PL", "perl"},
+		{"perl-cpanfile", "cpanfile", "perl"},
+		{"perl-dist-ini", "dist.ini", "perl"},
 		// Static-site generators.
 		{"hugo-toml", "hugo.toml", "hugo"},
 		{"hugo-yaml", "hugo.yaml", "hugo"},
@@ -76,6 +91,9 @@ func TestDetect_GlobIndicators(t *testing.T) {
 		// HasFile matching is case-insensitive (equalFold) — the
 		// conventional NuGet capitalisation must still detect.
 		{"dotnet-nuget-config-mixed-case", "NuGet.Config", "dotnet"},
+		{"swift-podspec", "Alamofire.podspec", "swift"},
+		{"r-rproj", "myanalysis.Rproj", "r"},
+		{"matlab-prj", "Export_fig.prj", "matlab"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -218,8 +236,8 @@ func TestFind_Excludes(t *testing.T) {
 
 func TestRegistry_Types(t *testing.T) {
 	types := projectdetect.DefaultRegistry().Types()
-	if len(types) < 18 {
-		t.Errorf("registered types = %d, want at least 18 built-ins (10 original + 8 SSGs)", len(types))
+	if len(types) < 28 {
+		t.Errorf("registered types = %d, want at least 28 built-ins (10 original + 8 SSGs + 10 language ecosystems)", len(types))
 	}
 	// Verify sorted by Name.
 	for i := 1; i < len(types); i++ {

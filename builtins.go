@@ -105,6 +105,104 @@ func init() {
 		// docker-compose stacks don't have a canonical artefact dir.
 	})
 
+	// Additional language / build-tool ecosystems. Indicators match a
+	// directory's FILES only (HasFile / HasGlob never see subdirectory
+	// names), so each marker below is a real file at the project root —
+	// e.g. Swift uses Package.swift / *.podspec rather than the
+	// *.xcodeproj bundle, which is a directory.
+
+	Register(&ProjectType{
+		Name:        "swift",
+		Description: "Swift package (Package.swift) / CocoaPods (*.podspec)",
+		Indicators: []Indicator{
+			{HasFile: "Package.swift"},
+			{HasGlob: "*.podspec"},
+		},
+		BuildExcludes: []string{".build", ".swiftpm", "DerivedData"},
+	})
+
+	Register(&ProjectType{
+		Name:          "php",
+		Description:   "PHP Composer project (composer.json)",
+		Indicators:    []Indicator{{HasFile: "composer.json"}},
+		BuildExcludes: []string{"vendor"},
+	})
+
+	Register(&ProjectType{
+		Name:          "scala-sbt",
+		Description:   "Scala sbt project (build.sbt)",
+		Indicators:    []Indicator{{HasFile: "build.sbt"}},
+		BuildExcludes: []string{"target", ".bsp"},
+	})
+
+	Register(&ProjectType{
+		Name:        "scala-mill",
+		Description: "Scala Mill project (build.mill / build.sc)",
+		Indicators: []Indicator{
+			{HasFile: "build.mill"},
+			{HasFile: "build.sc"},
+		},
+		BuildExcludes: []string{"out"},
+	})
+
+	Register(&ProjectType{
+		Name:          "cmake",
+		Description:   "C/C++ CMake project (CMakeLists.txt)",
+		Indicators:    []Indicator{{HasFile: "CMakeLists.txt"}},
+		BuildExcludes: []string{"build", "cmake-build-debug", "cmake-build-release", "_build"},
+	})
+
+	Register(&ProjectType{
+		Name:        "autotools",
+		Description: "GNU Autotools project (configure.ac / configure.in / Makefile.am)",
+		Indicators: []Indicator{
+			{HasFile: "configure.ac"},
+			{HasFile: "configure.in"},
+			{HasFile: "Makefile.am"},
+		},
+		BuildExcludes: []string{"autom4te.cache"},
+	})
+
+	Register(&ProjectType{
+		Name:        "r",
+		Description: "R package / project (DESCRIPTION / *.Rproj)",
+		Indicators: []Indicator{
+			{HasFile: "DESCRIPTION"},
+			{HasGlob: "*.Rproj"},
+		},
+		// R builds in-place; no canonical artefact dir.
+	})
+
+	Register(&ProjectType{
+		Name:        "zig",
+		Description: "Zig project (build.zig / build.zig.zon)",
+		Indicators: []Indicator{
+			{HasFile: "build.zig"},
+			{HasFile: "build.zig.zon"},
+		},
+		BuildExcludes: []string{"zig-out", "zig-cache", ".zig-cache"},
+	})
+
+	Register(&ProjectType{
+		Name:        "perl",
+		Description: "Perl distribution (Makefile.PL / Build.PL / cpanfile / dist.ini)",
+		Indicators: []Indicator{
+			{HasFile: "Makefile.PL"},
+			{HasFile: "Build.PL"},
+			{HasFile: "cpanfile"},
+			{HasFile: "dist.ini"},
+		},
+		BuildExcludes: []string{"blib", "_build"},
+	})
+
+	Register(&ProjectType{
+		Name:        "matlab",
+		Description: "MATLAB project / toolbox (*.prj)",
+		Indicators:  []Indicator{{HasGlob: "*.prj"}},
+		// .prj is an XML project/toolbox descriptor; MATLAB has no
+		// canonical build-output dir.
+	})
+
 	// Static-site generators. The 8 most-encountered SSGs; each maps
 	// to a canonical indicator file plus its standard build-output
 	// directory. The is_static_site CEL family predicate (see
