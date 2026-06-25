@@ -53,6 +53,16 @@ type FindOptions struct {
 	// Excludes is a list of basename globs that prune directories
 	// during the walk. Same semantics as search.Options.Excludes.
 	Excludes []string
+	// SkipDir, when non-nil, is consulted for every directory below
+	// root: returning true prunes that subtree. It runs in addition to
+	// Excludes and VCS pruning — any one of them firing prunes the
+	// directory. nil means no extra pruning (backward-compatible).
+	SkipDir SkipDirFunc
+	// IncludeVCSDirs, when false (the default), prunes version-control
+	// metadata directories (.git, .hg, .svn) from the walk — they never
+	// contain project roots and walking them is wasted I/O. Set true to
+	// restore descending into them.
+	IncludeVCSDirs bool
 	// Nested, when true, keeps walking inside a matched project
 	// root so nested sub-projects (monorepo workspaces, vendored
 	// dependencies) are also reported. Default (false) stops at the
@@ -122,8 +132,23 @@ func (r *Registry) Find(ctx context.Context, root string, opts FindOptions) (*Fi
 		if !d.IsDir() {
 			return nil
 		}
-		if path != root && excluder.skip(filepath.Base(path)) {
-			return fs.SkipDir
+		if path != root {
+			base := filepath.Base(path)
+			if !opts.IncludeVCSDirs && isVCSDir(base) {
+				return fs.SkipDir
+			}
+			if excluder.skip(base) {
+				return fs.SkipDir
+			}
+			if opts.SkipDir != nil {
+				rel, err := filepath.Rel(root, path)
+				if err != nil {
+					rel = base
+				}
+				if opts.SkipDir(rel, base) {
+					return fs.SkipDir
+				}
+			}
 		}
 
 		matches := r.Detect(nil, path)
@@ -177,8 +202,23 @@ func Find(ctx context.Context, root string, opts FindOptions) (*FindResult, erro
 // Cheap: only directories that contain at least one project
 // indicator contribute. Empty result when no projects are detected
 // (or the registry has no built-ins with BuildExcludes set).
+//
+// Prunes VCS dirs by default (.git/.hg/.svn). To pass a SkipDir
+// predicate or other walk options, use CollectBuildExcludesWithOptions.
 func (r *Registry) CollectBuildExcludes(ctx context.Context, root string) ([]string, error) {
-	res, err := r.Find(ctx, root, FindOptions{Nested: true})
+	return r.CollectBuildExcludesWithOptions(ctx, root, FindOptions{})
+}
+
+// CollectBuildExcludesWithOptions is CollectBuildExcludes with caller
+// control over the walk. opts.Nested is forced on (CollectBuildExcludes
+// is inherently a nested collect — every project below root
+// contributes), but opts.SkipDir, opts.Excludes, and opts.IncludeVCSDirs
+// are honoured so the collect walk prunes exactly the same subtrees the
+// caller's own walker does. opts.Types is honoured too — restrict to
+// the project types whose excludes you care about.
+func (r *Registry) CollectBuildExcludesWithOptions(ctx context.Context, root string, opts FindOptions) ([]string, error) {
+	opts.Nested = true
+	res, err := r.Find(ctx, root, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -215,6 +255,12 @@ func (r *Registry) CollectBuildExcludes(ctx context.Context, root string) ([]str
 // DefaultRegistry.
 func CollectBuildExcludes(ctx context.Context, root string) ([]string, error) {
 	return defaultRegistry.CollectBuildExcludes(ctx, root)
+}
+
+// CollectBuildExcludesWithOptions is the package-level shortcut over
+// DefaultRegistry.
+func CollectBuildExcludesWithOptions(ctx context.Context, root string, opts FindOptions) ([]string, error) {
+	return defaultRegistry.CollectBuildExcludesWithOptions(ctx, root, opts)
 }
 
 // readListing returns the basenames of immediate children of dir,

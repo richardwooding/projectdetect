@@ -49,6 +49,33 @@ Recursively find project roots under a tree:
 res, err := projectdetect.Find(ctx, "/path/to/code", projectdetect.FindOptions{})
 ```
 
+## Pruning the walk
+
+`Find`, `CollectBuildExcludes`, and the resolver walk-up all prune
+version-control metadata directories (`.git`, `.hg`, `.svn`) by default —
+they never hold project roots and walking them is wasted I/O. Set
+`IncludeVCSDirs: true` to descend into them.
+
+To mirror an external walker's exclusions exactly, pass a `SkipDir`
+predicate. It's consulted for every directory below the walk root;
+returning `true` prunes that whole subtree:
+
+```go
+res, err := projectdetect.Find(ctx, root, projectdetect.FindOptions{
+    SkipDir: func(relPath, name string) bool {
+        return name == "node_modules" || name == "target"
+    },
+})
+
+// Same hook on the build-artefact collector …
+ex, err := projectdetect.CollectBuildExcludesWithOptions(ctx, root, projectdetect.FindOptions{
+    SkipDir: skip,
+})
+
+// … and on the per-file resolver walk-up.
+r := projectdetect.NewResolverWithOptions(root, nil, projectdetect.ResolveOptions{SkipDir: skip})
+```
+
 ## Custom types (YAML)
 
 Load extra project types from YAML — `has_file`, `has_glob`, `has_subdir_glob`, or `cel`:
