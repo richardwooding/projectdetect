@@ -107,6 +107,65 @@ func TestResolveForPath_PolyglotMultipleTypes(t *testing.T) {
 	}
 }
 
+func TestResolver_SkipsVCSDirsByDefault(t *testing.T) {
+	// A file inside .git must resolve to the enclosing project, NOT to
+	// the .git dir (even when .git contortedly contains a marker).
+	root := t.TempDir()
+	mustWrite(t, filepath.Join(root, "go.mod"), "module x\n")
+	mustMkdir(t, filepath.Join(root, ".git"))
+	mustWrite(t, filepath.Join(root, ".git", "go.mod"), "module ghost\n")
+
+	resolver := projectdetect.NewResolver(root, nil)
+	matches := resolver.Resolve(filepath.Join(root, ".git", "config"))
+	if len(matches) != 1 || matches[0].Type != "go" {
+		t.Errorf(".git/config: matches=%+v, want [go] from the enclosing root (.git skipped)", matches)
+	}
+
+	// Opt back in: now .git itself resolves as a project.
+	resolver = projectdetect.NewResolverWithOptions(root, nil, projectdetect.ResolveOptions{IncludeVCSDirs: true})
+	matches = resolver.Resolve(filepath.Join(root, ".git", "config"))
+	if len(matches) != 1 || matches[0].Type != "go" {
+		t.Errorf(".git/config with IncludeVCSDirs: matches=%+v, want [go] (the .git dir's own marker)", matches)
+	}
+}
+
+func TestResolver_SkipDirPredicate(t *testing.T) {
+	root := t.TempDir()
+	mustWrite(t, filepath.Join(root, "go.mod"), "module outer\n")
+	mustMkdir(t, filepath.Join(root, "skipme", "sub"))
+	mustWrite(t, filepath.Join(root, "skipme", "Cargo.toml"), "[package]\nname=\"x\"\n")
+
+	resolver := projectdetect.NewResolverWithOptions(root, nil, projectdetect.ResolveOptions{
+		SkipDir: func(_, name string) bool { return name == "skipme" },
+	})
+	// A file under skipme/sub would normally resolve to skipme (rust),
+	// but the predicate skips skipme, so the walk reaches the outer Go root.
+	matches := resolver.Resolve(filepath.Join(root, "skipme", "sub", "file.txt"))
+	if len(matches) != 1 || matches[0].Type != "go" {
+		t.Errorf("matches=%+v, want [go] (skipme pruned, outer root wins)", matches)
+	}
+}
+
+func TestResolveForPathWithOptions_SkipsVCS(t *testing.T) {
+	root := t.TempDir()
+	mustWrite(t, filepath.Join(root, "go.mod"), "module x\n")
+	mustMkdir(t, filepath.Join(root, ".git"))
+	mustWrite(t, filepath.Join(root, ".git", "Cargo.toml"), "[package]\nname=\"x\"\n")
+
+	gotRoot, matches := projectdetect.ResolveForPath(filepath.Join(root, ".git", "config"), nil)
+	if gotRoot != root {
+		t.Errorf("root=%q want %q (.git skipped as a candidate)", gotRoot, root)
+	}
+	if len(matches) != 1 || matches[0].Type != "go" {
+		t.Errorf("matches=%+v want [go]", matches)
+	}
+
+	gotRoot, matches = projectdetect.ResolveForPathWithOptions(filepath.Join(root, ".git", "config"), nil, projectdetect.ResolveOptions{IncludeVCSDirs: true})
+	if gotRoot != filepath.Join(root, ".git") || len(matches) != 1 || matches[0].Type != "rust" {
+		t.Errorf("with IncludeVCSDirs: root=%q matches=%+v, want .git as rust", gotRoot, matches)
+	}
+}
+
 func TestResolver_CustomRegistry(t *testing.T) {
 	// Use an isolated registry with a single custom type so we can
 	// verify the resolver targets the registry it was constructed

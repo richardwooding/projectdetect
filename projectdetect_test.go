@@ -277,6 +277,104 @@ func TestFind_Excludes(t *testing.T) {
 	}
 }
 
+func TestFind_SkipDir(t *testing.T) {
+	root := t.TempDir()
+	// root/keep/go.mod   → reported
+	// root/skip/go.mod   → pruned by SkipDir predicate
+	// root/skip/inner/go.mod → pruned with its parent's subtree
+	mustMkdir(t, filepath.Join(root, "keep"))
+	mustMkdir(t, filepath.Join(root, "skip", "inner"))
+	mustWrite(t, filepath.Join(root, "keep", "go.mod"), "module keep\n")
+	mustWrite(t, filepath.Join(root, "skip", "go.mod"), "module skip\n")
+	mustWrite(t, filepath.Join(root, "skip", "inner", "go.mod"), "module inner\n")
+
+	var seen []string
+	result, err := projectdetect.Find(t.Context(), root, projectdetect.FindOptions{
+		Nested: true,
+		SkipDir: func(relPath, name string) bool {
+			seen = append(seen, relPath)
+			return name == "skip"
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Count != 1 || result.Projects[0].Path != filepath.Join(root, "keep") {
+		t.Fatalf("got %+v, want only the 'keep' project (skip subtree pruned)", result.Projects)
+	}
+	// The predicate must receive relPath relative to root, and must NOT
+	// have been asked about anything below the pruned subtree.
+	for _, rel := range seen {
+		if rel == filepath.Join("skip", "inner") {
+			t.Errorf("SkipDir was consulted for %q inside a pruned subtree", rel)
+		}
+		if filepath.IsAbs(rel) {
+			t.Errorf("SkipDir relPath = %q, want a path relative to root", rel)
+		}
+	}
+}
+
+func TestFind_PrunesVCSDirsByDefault(t *testing.T) {
+	root := t.TempDir()
+	// A go.mod buried inside .git must not surface by default.
+	mustMkdir(t, filepath.Join(root, ".git", "sub"))
+	mustWrite(t, filepath.Join(root, ".git", "sub", "go.mod"), "module ghost\n")
+	mustMkdir(t, filepath.Join(root, "real"))
+	mustWrite(t, filepath.Join(root, "real", "go.mod"), "module real\n")
+
+	result, err := projectdetect.Find(t.Context(), root, projectdetect.FindOptions{Nested: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Count != 1 || result.Projects[0].Path != filepath.Join(root, "real") {
+		t.Fatalf("got %+v, want only 'real' (.git pruned by default)", result.Projects)
+	}
+
+	// Opt back in: now the buried project is visible.
+	result, err = projectdetect.Find(t.Context(), root, projectdetect.FindOptions{
+		Nested:         true,
+		IncludeVCSDirs: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Count != 2 {
+		t.Fatalf("got %d projects, want 2 with IncludeVCSDirs=true; projects=%+v", result.Count, result.Projects)
+	}
+}
+
+func TestCollectBuildExcludesWithOptions_SkipDir(t *testing.T) {
+	root := t.TempDir()
+	// A Go module (BuildExcludes include "vendor") under a subtree the
+	// caller prunes — its excludes must not be collected.
+	mustMkdir(t, filepath.Join(root, "skip"))
+	mustWrite(t, filepath.Join(root, "skip", "go.mod"), "module skip\n")
+	// A Node project that is kept (BuildExcludes include "node_modules").
+	mustMkdir(t, filepath.Join(root, "keep"))
+	mustWrite(t, filepath.Join(root, "keep", "package.json"), `{"name":"x"}`)
+
+	excludes, err := projectdetect.CollectBuildExcludesWithOptions(t.Context(), root, projectdetect.FindOptions{
+		SkipDir: func(_, name string) bool { return name == "skip" },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ex := range excludes {
+		if ex == "vendor" {
+			t.Errorf("collected %q from a pruned subtree; excludes=%v", ex, excludes)
+		}
+	}
+	gotNodeModules := false
+	for _, ex := range excludes {
+		if ex == "node_modules" {
+			gotNodeModules = true
+		}
+	}
+	if !gotNodeModules {
+		t.Errorf("excludes=%v, want node_modules from the kept project", excludes)
+	}
+}
+
 func TestRegistry_Types(t *testing.T) {
 	types := projectdetect.DefaultRegistry().Types()
 	if len(types) < 28 {
