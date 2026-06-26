@@ -116,3 +116,5 @@ where it powers the `detect-project` / `find-projects` / `which-project` command
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+<!-- review-gate smoke test, will be reverted -->
