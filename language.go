@@ -60,9 +60,18 @@ var langExtensions = map[string][]string{
 // initExtLang. It is read-only after init.
 var extLang = initExtLang()
 
+// sortedLangs is the sorted set of language ids, computed once at init so
+// Languages() need only copy it.
+var sortedLangs = initSortedLangs()
+
+// initExtLang sorts each language's extension slice in place (so
+// ExtensionsForLanguage can hand out copies without re-sorting) and builds the
+// reverse extension → language index, panicking if two languages claim the same
+// extension so the reverse map stays strictly 1:1.
 func initExtLang() map[string]string {
 	m := make(map[string]string)
 	for lang, exts := range langExtensions {
+		sort.Strings(exts)
 		for _, ext := range exts {
 			if prev, dup := m[ext]; dup {
 				panic(fmt.Sprintf("projectdetect: extension %q claimed by both %q and %q", ext, prev, lang))
@@ -71,6 +80,15 @@ func initExtLang() map[string]string {
 		}
 	}
 	return m
+}
+
+func initSortedLangs() []string {
+	out := make([]string, 0, len(langExtensions))
+	for lang := range langExtensions {
+		out = append(out, lang)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // LanguageForPath returns the canonical language id for a file path, derived
@@ -87,6 +105,11 @@ func LanguageForExt(ext string) string {
 	if ext == "" {
 		return ""
 	}
+	// Fast path: already normalised (lowercase, dotted), as returned by
+	// filepath.Ext for a lowercase extension — the common case.
+	if lang, ok := extLang[ext]; ok {
+		return lang
+	}
 	ext = strings.ToLower(ext)
 	if !strings.HasPrefix(ext, ".") {
 		ext = "." + ext
@@ -94,19 +117,18 @@ func LanguageForExt(ext string) string {
 	return extLang[ext]
 }
 
-// Languages returns the sorted set of language ids known to the detector.
+// Languages returns the sorted set of language ids known to the detector. The
+// returned slice is a fresh copy the caller may modify.
 func Languages() []string {
-	out := make([]string, 0, len(langExtensions))
-	for lang := range langExtensions {
-		out = append(out, lang)
-	}
-	sort.Strings(out)
+	out := make([]string, len(sortedLangs))
+	copy(out, sortedLangs)
 	return out
 }
 
 // ExtensionsForLanguage returns the extensions mapped to a language id, sorted
 // and each with a leading dot, or nil for an unknown id. The returned slice is a
-// fresh copy the caller may modify.
+// fresh copy the caller may modify. (langExtensions slices are sorted in place
+// at init, so no re-sort is needed here.)
 func ExtensionsForLanguage(lang string) []string {
 	exts, ok := langExtensions[lang]
 	if !ok {
@@ -114,6 +136,5 @@ func ExtensionsForLanguage(lang string) []string {
 	}
 	out := make([]string, len(exts))
 	copy(out, exts)
-	sort.Strings(out)
 	return out
 }
