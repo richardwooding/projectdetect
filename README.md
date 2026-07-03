@@ -18,6 +18,22 @@ A type matches by **indicators**: an exact filename (`HasFile`), a file-basename
 
 Each type also declares its canonical build-artefact dirs (`bin`/`obj`, `node_modules`, `target`, …) — see `CollectBuildExcludes`.
 
+## Detect a file's language
+
+A separate axis from project types: project types answer *"what kind of project is this directory?"*, while `LanguageForPath` answers *"what language is this single file?"* by its extension. A language commonly has several extensions (C++ alone has a dozen header/source spellings), so the mapping is one-to-many.
+
+```go
+projectdetect.LanguageForPath("src/app.py")   // "python"
+projectdetect.LanguageForPath("Widget.cpp")   // "cpp"
+projectdetect.LanguageForExt(".rs")           // "rust"  (".rs", "rs", ".RS" all work)
+projectdetect.LanguageForPath("README.md")    // ""      (unrecognised)
+
+projectdetect.Languages()                      // sorted ids
+projectdetect.ExtensionsForLanguage("python")  // [".pxd" ".py" ".pyi" ".pyw" ".pyx"]
+```
+
+Recognised ids: `go`, `python`, `javascript`, `typescript`, `java`, `rust`, `c`, `cpp`, `csharp`, `kotlin`, `php`, `ruby`, `scala`, `r`, `matlab`, `perl`, `swift`. A few ambiguous extensions are assigned to a single language by convention — `.h`→`c`, `.m`→`matlab`, `.sc`→`scala`, `.t`→`perl` — so the extension→language map is 1:1.
+
 ## Install
 
 ```sh
