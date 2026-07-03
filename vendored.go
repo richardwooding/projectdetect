@@ -68,15 +68,25 @@ func NewVendorMatcher() *VendorMatcher {
 	return &VendorMatcher{}
 }
 
+// precompiledDefaultPatterns compiles the built-in patterns once at package
+// init (regexp.Compile is relatively expensive), so DefaultVendorMatcher only
+// copies the slice rather than recompiling on every call. A malformed built-in
+// panics here at startup — it's a programming bug, not a runtime condition.
+var precompiledDefaultPatterns = func() []*regexp.Regexp {
+	compiled := make([]*regexp.Regexp, len(defaultVendorPatterns))
+	for i, p := range defaultVendorPatterns {
+		compiled[i] = regexp.MustCompile(p)
+	}
+	return compiled
+}()
+
 // DefaultVendorMatcher returns a new matcher preloaded with the curated built-in
 // patterns (see defaultVendorPatterns). The returned matcher is independent, so
 // Add-ing to it does not affect the package-level IsVendored.
 func DefaultVendorMatcher() *VendorMatcher {
 	m := NewVendorMatcher()
-	if err := m.Add(defaultVendorPatterns...); err != nil {
-		// The built-ins are compile-time constants; a bad one is a programming bug.
-		panic(err)
-	}
+	m.patterns = make([]*regexp.Regexp, len(precompiledDefaultPatterns))
+	copy(m.patterns, precompiledDefaultPatterns)
 	return m
 }
 
@@ -135,13 +145,27 @@ func RegisterVendorPattern(patterns ...string) error {
 // minified bundles pack thousands of characters onto one or few lines.
 const minifiedAvgLineLen = 200
 
+// maxMinifiedScan caps how much of a file IsMinified inspects, so a huge file
+// can't turn the check into a performance/DoS sink. 128 KiB is far more than
+// enough to judge line shape.
+const maxMinifiedScan = 128 * 1024
+
 // IsMinified reports whether content looks minified from its shape alone —
 // useful for bundles that carry no telltale name (e.g. a minified prism.js). It
 // is a heuristic: content of a meaningful size whose average line length far
-// exceeds normal source. Files under 512 bytes are never considered minified.
+// exceeds normal source. Files under 512 bytes are never considered minified,
+// and binary content (a NUL byte in the first 512 bytes) is rejected outright
+// so images/PDFs/archives — which also have few newlines — aren't mistaken for
+// minified text. Only the first maxMinifiedScan bytes are examined.
 func IsMinified(content []byte) bool {
 	if len(content) < 512 {
 		return false
+	}
+	if len(content) > maxMinifiedScan {
+		content = content[:maxMinifiedScan]
+	}
+	if bytes.IndexByte(content[:512], 0) != -1 {
+		return false // looks binary, not minified text
 	}
 	lines := bytes.Count(content, []byte{'\n'}) + 1
 	return len(content)/lines > minifiedAvgLineLen

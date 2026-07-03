@@ -106,4 +106,11 @@ func TestIsMinified(t *testing.T) {
 	if projectdetect.IsMinified([]byte("x=1;")) {
 		t.Error("tiny content should never be minified")
 	}
+
+	// Binary content (NUL byte, few newlines) must not be flagged minified.
+	bin := make([]byte, 2000)
+	bin[42] = 0x00
+	if projectdetect.IsMinified(bin) {
+		t.Error("binary content should not be flagged minified")
+	}
 }
