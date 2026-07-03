@@ -34,6 +34,35 @@ projectdetect.ExtensionsForLanguage("python")  // [".pxd" ".py" ".pyi" ".pyw" ".
 
 Recognised ids: `go`, `python`, `javascript`, `typescript`, `java`, `rust`, `c`, `cpp`, `csharp`, `kotlin`, `php`, `ruby`, `scala`, `r`, `matlab`, `perl`, `swift`. A few ambiguous extensions are assigned to a single language by convention — `.h`→`c`, `.m`→`matlab`, `.sc`→`scala`, `.t`→`perl` — so the extension→language map is 1:1.
 
+## Skip vendored / minified files
+
+A third axis: *"is this file third-party content an analysis tool should skip?"* Unlike a project type's `BuildExcludes` (which prune whole directories), this classifies individual **file paths** — so a bundled `jquery.min.js` or a vendored library committed anywhere (even under `docs/`) is caught. The default patterns are a curated subset of [GitHub Linguist's `vendor.yml`](https://github.com/github-linguist/linguist/blob/main/lib/linguist/vendor.yml).
+
+```go
+projectdetect.IsVendored("docs/js/jquery.min.js")     // true (minified)
+projectdetect.IsVendored("node_modules/x/index.js")   // true (dependency dir)
+projectdetect.IsVendored("website/scripts/prism.js")  // true (known library)
+projectdetect.IsVendored("src/main.go")               // false (real source)
+```
+
+**Flexible** — extend the built-ins, or build your own set:
+
+```go
+// Add patterns to the process-wide default used by IsVendored:
+projectdetect.RegisterVendorPattern(`\.pb\.go$`, `(^|/)generated/`)
+
+// Or a fully custom matcher (regexps over the slash-separated path):
+m := projectdetect.NewVendorMatcher()          // empty; DefaultVendorMatcher() preloads built-ins
+_ = m.Add(`(^|/)my-vendor/`)
+m.Match("libs/my-vendor/thing.js")             // true
+```
+
+For bundles with no telltale name, `IsMinified(content []byte)` judges by shape (a meaningfully-sized file whose average line length far exceeds normal source):
+
+```go
+projectdetect.IsMinified(data) // true for a packed one-liner, false for hand-written source
+```
+
 ## Install
 
 ```sh
