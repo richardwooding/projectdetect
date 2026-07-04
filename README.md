@@ -3,7 +3,7 @@
 [![CI](https://github.com/richardwooding/projectdetect/actions/workflows/ci.yml/badge.svg)](https://github.com/richardwooding/projectdetect/actions/workflows/ci.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/richardwooding/projectdetect.svg)](https://pkg.go.dev/github.com/richardwooding/projectdetect)
 
-**Website:** https://richardwooding.github.io/projectdetect/
+**Website:** [richardwooding.github.io/projectdetect](https://richardwooding.github.io/projectdetect/)
 
 Detect what kind of project a directory is — pure Go, no cgo.
 
