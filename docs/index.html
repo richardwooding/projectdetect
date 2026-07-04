@@ -238,16 +238,16 @@
           <span class="dot" style="background:#ff5f56"></span>
           <span class="dot" style="background:#ffbd2e"></span>
           <span class="dot" style="background:#27c93f"></span>
-          <span class="t">projectdetect</span>
+          <span class="t">detect.go</span>
         </div>
-<pre><span class="pr">$</span> projectdetect find ./workspace
-<span class="hd">TYPE            ROOT                VIA</span>
-<span class="n">go</span>              ./api               <span class="loc">go.mod</span>
-<span class="n">node</span>            ./web               <span class="loc">package.json</span>
-<span class="n">rust</span>            ./crates/engine     <span class="loc">Cargo.toml</span>
-<span class="n">docker-compose</span>  ./                  <span class="loc">docker-compose.yml</span>
-<span class="hd"></span>
-<span class="ok">ok</span>  4 roots      <span class="warn">skipped</span> .git node_modules target</pre>
+<pre><span class="hd">// what project type(s) is this directory?</span>
+<span class="n">for</span> _, m := <span class="n">range</span> projectdetect.Detect(fsys, <span class="ok">"."</span>) {
+    fmt.Printf(<span class="ok">"%s via %s\n"</span>, m.Type, m.Indicator)
+}
+
+<span class="hd">// go        via go.mod</span>
+<span class="hd">// node      via package.json</span>
+<span class="hd">// docker-compose via docker-compose.yml</span></pre>
       </div>
     </div>
   </section>
