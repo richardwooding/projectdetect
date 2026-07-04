@@ -136,6 +136,12 @@
 .gl-badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 26px 0 0; padding: 0; list-style: none; }
 .gl-lang { font: 700 .72rem/1 var(--gl-mono); color: var(--gl-muted); background: var(--gl-panel);
   border: 1px solid var(--gl-border); border-radius: 999px; padding: 7px 12px; }
+/* Interactive affordances apply only to real tabs (buttons carrying data-gl-tab).
+   A plain gl-lang is a static badge and must not look or focus like a control. */
+.gl-lang[data-gl-tab] { cursor: pointer; transition: color .12s, border-color .12s, background .12s; }
+.gl-lang[data-gl-tab]:hover { color: var(--gl-fg); border-color: var(--gl-accent); }
+.gl-lang[data-gl-tab]:focus-visible { outline: 2px solid var(--gl-accent); outline-offset: 2px; }
+.gl-lang[aria-selected="true"] { background: linear-gradient(180deg, var(--gl-accent), var(--gl-accent-2)); color: var(--gl-accent-ink); border-color: transparent; }
 
 /* ---- cards / grid ---- */
 .gl-grid { display: grid; gap: 18px; }
@@ -480,6 +486,7 @@ project_types:
         btn.setAttribute("aria-expanded", String(open));
       });
       nav.addEventListener("click", function (e) {
+        // closest("a") so clicks on elements nested inside a link still close.
         if (e.target.closest && e.target.closest("a")) {
           nav.classList.remove("open");
           btn.setAttribute("aria-expanded", "false");
