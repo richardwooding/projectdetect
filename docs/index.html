@@ -133,13 +133,9 @@
 .gl-term .warn { color: var(--gl-amber); }
 
 /* ---- pills / tabs ---- */
-.gl-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 26px; }
+.gl-badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 26px 0 0; padding: 0; list-style: none; }
 .gl-lang { font: 700 .72rem/1 var(--gl-mono); color: var(--gl-muted); background: var(--gl-panel);
-  border: 1px solid var(--gl-border); border-radius: 999px; padding: 7px 12px; cursor: pointer;
-  transition: color .12s, border-color .12s, background .12s; }
-.gl-lang:hover { color: var(--gl-fg); border-color: var(--gl-accent); }
-.gl-lang:focus-visible { outline: 2px solid var(--gl-accent); outline-offset: 2px; }
-.gl-lang[aria-selected="true"] { background: linear-gradient(180deg, var(--gl-accent), var(--gl-accent-2)); color: var(--gl-accent-ink); border-color: transparent; }
+  border: 1px solid var(--gl-border); border-radius: 999px; padding: 7px 12px; }
 
 /* ---- cards / grid ---- */
 .gl-grid { display: grid; gap: 18px; }
@@ -205,7 +201,7 @@
       </svg>
       projectdetect
     </span>
-    <button class="gl-nav-toggle" aria-label="Toggle navigation" data-gl-nav-toggle="nav">☰</button>
+    <button class="gl-nav-toggle" aria-label="Toggle navigation" data-gl-nav-toggle="nav" aria-expanded="false">☰</button>
     <nav id="nav">
       <a href="#features">Features</a>
       <a href="#types">Types</a>
@@ -298,36 +294,36 @@
       <p class="gl-eyebrow">coverage</p>
       <h2>Built-in project types.</h2>
       <p class="gl-lede" style="margin-top:14px">28 types out of the box — languages, build tools, and static-site generators. Extend the set with your own via YAML.</p>
-      <div class="gl-badges" aria-label="Built-in project types">
-        <span class="gl-lang">go</span>
-        <span class="gl-lang">node</span>
-        <span class="gl-lang">rust</span>
-        <span class="gl-lang">python</span>
-        <span class="gl-lang">ruby</span>
-        <span class="gl-lang">java-maven</span>
-        <span class="gl-lang">java-gradle</span>
-        <span class="gl-lang">dotnet</span>
-        <span class="gl-lang">terraform</span>
-        <span class="gl-lang">docker-compose</span>
-        <span class="gl-lang">swift</span>
-        <span class="gl-lang">php</span>
-        <span class="gl-lang">scala-sbt</span>
-        <span class="gl-lang">scala-mill</span>
-        <span class="gl-lang">cmake</span>
-        <span class="gl-lang">autotools</span>
-        <span class="gl-lang">r</span>
-        <span class="gl-lang">zig</span>
-        <span class="gl-lang">perl</span>
-        <span class="gl-lang">matlab</span>
-        <span class="gl-lang">hugo</span>
-        <span class="gl-lang">jekyll</span>
-        <span class="gl-lang">eleventy</span>
-        <span class="gl-lang">astro</span>
-        <span class="gl-lang">gatsby</span>
-        <span class="gl-lang">mkdocs</span>
-        <span class="gl-lang">docusaurus</span>
-        <span class="gl-lang">pelican</span>
-      </div>
+      <ul class="gl-badges" aria-label="Built-in project types">
+        <li class="gl-lang">go</li>
+        <li class="gl-lang">node</li>
+        <li class="gl-lang">rust</li>
+        <li class="gl-lang">python</li>
+        <li class="gl-lang">ruby</li>
+        <li class="gl-lang">java-maven</li>
+        <li class="gl-lang">java-gradle</li>
+        <li class="gl-lang">dotnet</li>
+        <li class="gl-lang">terraform</li>
+        <li class="gl-lang">docker-compose</li>
+        <li class="gl-lang">swift</li>
+        <li class="gl-lang">php</li>
+        <li class="gl-lang">scala-sbt</li>
+        <li class="gl-lang">scala-mill</li>
+        <li class="gl-lang">cmake</li>
+        <li class="gl-lang">autotools</li>
+        <li class="gl-lang">r</li>
+        <li class="gl-lang">zig</li>
+        <li class="gl-lang">perl</li>
+        <li class="gl-lang">matlab</li>
+        <li class="gl-lang">hugo</li>
+        <li class="gl-lang">jekyll</li>
+        <li class="gl-lang">eleventy</li>
+        <li class="gl-lang">astro</li>
+        <li class="gl-lang">gatsby</li>
+        <li class="gl-lang">mkdocs</li>
+        <li class="gl-lang">docusaurus</li>
+        <li class="gl-lang">pelican</li>
+      </ul>
       <p class="gl-hint">Recognised file languages: go · python · javascript · typescript · java · rust · c · cpp · csharp · kotlin · php · ruby · scala · r · matlab · perl · swift</p>
     </div>
   </section>
@@ -479,9 +475,15 @@ project_types:
     document.querySelectorAll("[data-gl-nav-toggle]").forEach(function (btn) {
       var nav = document.getElementById(btn.getAttribute("data-gl-nav-toggle"));
       if (!nav) return;
-      btn.addEventListener("click", function () { nav.classList.toggle("open"); });
+      btn.addEventListener("click", function () {
+        var open = nav.classList.toggle("open");
+        btn.setAttribute("aria-expanded", String(open));
+      });
       nav.addEventListener("click", function (e) {
-        if (e.target.closest && e.target.closest("a")) nav.classList.remove("open");
+        if (e.target.closest && e.target.closest("a")) {
+          nav.classList.remove("open");
+          btn.setAttribute("aria-expanded", "false");
+        }
       });
     });
   });
