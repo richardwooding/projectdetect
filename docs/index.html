@@ -11,7 +11,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 })(window,document,'script','dataLayer','GTM-NB62JPNJ');</script>
 <!-- End Google Tag Manager -->
 <title>projectdetect — detect what kind of project a directory is</title>
-<meta name="description" content="Pure-Go, no-cgo library that answers what kind of project a directory is: 28 built-in types, per-file language detection, and vendored/minified filtering.">
+<meta name="description" content="Pure-Go, no-cgo library that answers what kind of project a directory is: 28 built-in types, per-file language detection, and vendored, minified, and generated file filtering.">
 <meta property="og:url" content="https://richardwooding.github.io/projectdetect/">
 <meta property="og:site_name" content="Richard Wooding">
 <meta property="og:image" content="https://richardwooding.github.io/projectdetect/og.png">
@@ -123,13 +123,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </div>
 
         <div class="gl-card">
-          <h3><span class="gl-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8l7-5 7 5M5 16l7 5 7-5"/></svg></span>Custom types in YAML</h3>
-          <p>Load extra project types from YAML — <code>has_file</code>, <code>has_glob</code>, <code>has_subdir_glob</code>, or a <code>cel</code> expression. Register your own stacks into the default registry.</p>
+          <h3><span class="gl-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 4V2M15 8V6M11.5 6h2M16.5 6h2M6 21l11-11-2-2L4 19z"/></svg></span>Skip generated files</h3>
+          <p>A fourth axis: was this file emitted by a tool? <code>IsGenerated("user.pb.go", src)</code> matches curated path patterns (protoc output, <code>.gen.go</code>, lock files) or <code>// Code generated</code>-style markers in the first 20 lines.</p>
         </div>
 
         <div class="gl-card">
-          <h3><span class="gl-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg></span>CEL is opt-in</h3>
-          <p>The base package has <em>no</em> CEL dependency. Add one blank import to enable <code>cel:</code> indicators — otherwise <code>cel-go</code> and its transitive deps stay out of your build.</p>
+          <h3><span class="gl-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8l7-5 7 5M5 16l7 5 7-5"/></svg></span>Custom types · CEL opt-in</h3>
+          <p>Load extra project types from YAML — <code>has_file</code>, <code>has_glob</code>, <code>has_subdir_glob</code>, or a <code>cel</code> expression. One blank import enables CEL; otherwise <code>cel-go</code> stays out of your build.</p>
         </div>
 
       </div>
@@ -199,7 +199,8 @@ res, err := projectdetect.Find(
 <pre class="gl-code"><span class="c"># Per-file language detection.</span>
 projectdetect.LanguageForPath(<span class="s">"src/app.py"</span>) <span class="c">// "python"</span>
 projectdetect.LanguageForExt(<span class="s">".rs"</span>)         <span class="c">// "rust"</span>
-projectdetect.IsVendored(<span class="s">"docs/js/jquery.min.js"</span>) <span class="c">// true</span></pre>
+projectdetect.IsVendored(<span class="s">"docs/js/jquery.min.js"</span>) <span class="c">// true</span>
+projectdetect.IsGenerated(<span class="s">"api/user.pb.go"</span>, src)  <span class="c">// true</span></pre>
 <pre class="gl-code"><span class="c"># Custom types in YAML.</span>
 project_types:
   - name: my-stack
