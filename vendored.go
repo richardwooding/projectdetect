@@ -8,10 +8,12 @@ import (
 	"sync"
 )
 
-// Vendored-file detection is a third detection axis, complementary to the other
-// two: project types answer "what kind of project is this directory", languages
-// answer "what language is this file", and this answers "is this file
-// third-party / generated content a source-analysis tool should skip".
+// Vendored-file detection is a third detection axis, complementary to the
+// others: project types answer "what kind of project is this directory",
+// languages answer "what language is this file", and this answers "is this
+// file third-party content a source-analysis tool should skip". A fourth axis
+// in generated.go answers "was this file emitted by a tool" (see
+// GeneratedMatcher / IsGenerated).
 //
 // It differs from a project type's BuildExcludes (which prune whole directories
 // by basename): a VendorMatcher classifies individual file paths, so it catches
