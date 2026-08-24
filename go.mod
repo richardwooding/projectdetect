@@ -1,6 +1,6 @@
 module github.com/richardwooding/projectdetect
 
-go 1.26.2
+go 1.27.0
 
 require (
 	github.com/google/cel-go v0.28.1
