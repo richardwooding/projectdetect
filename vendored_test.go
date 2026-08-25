@@ -95,7 +95,7 @@ func TestIsMinified(t *testing.T) {
 
 	// Normal source: many short lines.
 	var sb strings.Builder
-	for i := 0; i < 200; i++ {
+	for range 200 {
 		sb.WriteString("func doThing() { return 1 }\n")
 	}
 	if projectdetect.IsMinified([]byte(sb.String())) {
