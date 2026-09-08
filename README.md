@@ -185,6 +185,12 @@ for consumers that only need filename/glob matching.
 Extracted from [`file-search-on`](https://github.com/richardwooding/file-search-on),
 where it powers the `detect-project` / `find-projects` / `which-project` commands.
 
+## Sponsor
+
+If this saves you time, you can [sponsor its maintenance](https://github.com/sponsors/richardwooding).
+Sponsorship pays for the unglamorous half — triage, dependency bumps, release plumbing — and is
+never a condition of getting help here.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
